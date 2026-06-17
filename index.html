@@ -1,0 +1,1312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>FallLedger · sovereign double-entry general ledger</title>
+<link rel="manifest" href='data:application/manifest+json,{"name":"FallLedger","short_name":"FallLedger","start_url":"./","display":"standalone","background_color":"%230b0a0f","theme_color":"%23ff8c00","icons":[{"src":"data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 192 192%27><rect width=%27192%27 height=%27192%27 fill=%27%230b0a0f%27 rx=%2728%27/><text x=%2796%27 y=%27130%27 font-family=%27Georgia, serif%27 font-size=%27108%27 font-weight=%27700%27 text-anchor=%27middle%27 fill=%27%23ff8c00%27>◊</text></svg>","sizes":"192x192","type":"image/svg+xml"}]}'>
+<style>
+:root{
+  --void:#0b0a0f;--void-2:#13121a;--ink:#1a1922;--ink-2:#22212c;
+  --line:#2a2934;--line-soft:#1f1e28;
+  --cream:#e6e1d6;--cream-dim:#a8a395;--cream-muted:#6e6a5e;
+  --brass:#b8974a;--amber:#ff8c00;--ox:#8b1a1a;
+  --green:#4ade80;--red:#ef4444;--blue:#60a5fa;--yellow:#fbbf24;
+  --serif:Georgia,'Libre Baskerville',ui-serif,serif;
+  --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --mono:'IBM Plex Mono','SF Mono',ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--void);color:var(--cream);font-family:var(--sans);font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit;background:transparent;border:0;outline:0}
+button{cursor:pointer}
+a{color:var(--brass);text-decoration:none}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--void)}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--ink-2)}
+
+.app{display:grid;grid-template-rows:42px auto 1fr;height:100vh;width:100vw}
+
+/* Header */
+.hdr{display:flex;align-items:center;gap:12px;padding:0 14px;background:linear-gradient(180deg,var(--void-2),var(--void));border-bottom:1px solid var(--line);height:42px;font-size:12px}
+.brand{display:flex;align-items:center;gap:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:.5px}
+.brand .glyph{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,var(--brass),var(--amber));color:var(--void);font-family:var(--serif);font-size:18px;font-weight:700}
+.brand .nm{color:var(--cream)}
+.brand .v{color:var(--cream-muted);font-family:var(--mono);font-size:10px;margin-left:2px}
+.hdr-sp{flex:1}
+.hdr select,.hdr button{padding:4px 10px;background:var(--ink);border:1px solid var(--line);border-radius:5px;color:var(--cream);font-size:11px;font-family:var(--mono)}
+.hdr select:hover,.hdr button:hover{background:var(--ink-2);border-color:var(--brass)}
+.hdr .closed-badge{padding:4px 8px;background:rgba(239,68,68,.12);border:1px solid var(--red);color:var(--red);border-radius:5px;font-family:var(--mono);font-size:10px}
+.hdr .closed-badge.open{background:rgba(74,222,128,.08);border-color:var(--green);color:var(--green)}
+.hdr .tier-badge{padding:4px 8px;background:var(--ink);border:1px solid var(--line);border-radius:5px;font-family:var(--mono);font-size:10px;color:var(--cream-dim)}
+.hdr .tier-badge.t3{border-color:var(--brass);color:var(--brass)}
+.hdr .auto-btn{background:linear-gradient(135deg,var(--brass),var(--amber));color:var(--void);font-weight:600;border:0}
+
+/* Tabs */
+.tabs{display:flex;background:var(--void-2);border-bottom:1px solid var(--line);padding:0 6px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:9px 14px;color:var(--cream-dim);font-size:12px;font-family:var(--mono);letter-spacing:.4px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.tab:hover{color:var(--cream)}
+.tab.active{color:var(--amber);border-bottom-color:var(--amber)}
+
+/* Main pane */
+.main{overflow:auto;padding:18px 22px;background:var(--void)}
+.pane{display:none;animation:fade .2s ease-out}
+.pane.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(2px)}to{opacity:1;transform:none}}
+
+h1,h2,h3{font-family:var(--serif);font-weight:700;color:var(--cream);letter-spacing:.3px}
+h1{font-size:22px;margin-bottom:4px}
+h2{font-size:16px;margin:18px 0 10px}
+h3{font-size:13px;margin:14px 0 6px;color:var(--brass)}
+.sub{color:var(--cream-muted);font-size:11px;font-family:var(--mono);margin-bottom:14px}
+
+/* Toolbar */
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px}
+.toolbar input,.toolbar select{padding:6px 10px;background:var(--ink);border:1px solid var(--line);border-radius:5px;font-size:12px}
+.toolbar input:focus,.toolbar select:focus{border-color:var(--brass)}
+.btn{padding:6px 12px;background:var(--ink);border:1px solid var(--line);border-radius:5px;color:var(--cream);font-size:12px;font-family:var(--mono);transition:.15s}
+.btn:hover{background:var(--ink-2);border-color:var(--brass)}
+.btn.primary{background:linear-gradient(135deg,var(--brass),var(--amber));color:var(--void);font-weight:600;border:0}
+.btn.primary:hover{filter:brightness(1.05)}
+.btn.danger{border-color:var(--ox);color:var(--red)}
+.btn.danger:hover{background:rgba(239,68,68,.08)}
+.btn.ghost{border-color:transparent;color:var(--cream-dim)}
+
+/* Tables */
+.tbl{width:100%;border-collapse:collapse;font-size:12px;font-family:var(--mono)}
+.tbl th,.tbl td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line-soft)}
+.tbl th{font-size:10px;letter-spacing:.6px;color:var(--cream-muted);text-transform:uppercase;background:var(--void-2);font-weight:600;position:sticky;top:0}
+.tbl td.num,.tbl th.num{text-align:right}
+.tbl tr:hover td{background:var(--void-2)}
+.tbl .acc-code{color:var(--brass);width:60px}
+.tbl .pos{color:var(--green)}
+.tbl .neg{color:var(--red)}
+.tbl .muted{color:var(--cream-muted)}
+.tbl .total td{font-weight:700;color:var(--amber);border-top:2px solid var(--line);border-bottom:0;background:var(--void-2)}
+.tbl .indent-1{padding-left:24px}
+.tbl .indent-2{padding-left:44px}
+
+/* Cards */
+.card{background:var(--ink);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:12px}
+.card h3{margin-top:0}
+.grid{display:grid;gap:12px}
+.grid-2{grid-template-columns:1fr 1fr}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+.kv{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line-soft);font-size:12px;font-family:var(--mono)}
+.kv:last-child{border-bottom:0}
+.kv .k{color:var(--cream-muted)}
+.kv .v{color:var(--cream)}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:100;padding:14px}
+.modal-bg.show{display:flex}
+.modal{background:var(--ink);border:1px solid var(--line);border-radius:10px;width:100%;max-width:720px;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.modal-hd{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.modal-hd h2{margin:0}
+.modal-bd{padding:18px}
+.modal-ft{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+.close-x{background:transparent;border:0;color:var(--cream-muted);font-size:20px;cursor:pointer;padding:0 6px}
+
+/* Form */
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;color:var(--cream-muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;padding:8px 10px;background:var(--void-2);border:1px solid var(--line);border-radius:5px;font-size:13px;color:var(--cream)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--brass)}
+.field textarea{resize:vertical;min-height:60px;font-family:var(--mono);font-size:12px}
+.row{display:grid;gap:10px;grid-template-columns:repeat(2,1fr)}
+.row.r3{grid-template-columns:repeat(3,1fr)}
+.row.r4{grid-template-columns:repeat(4,1fr)}
+
+/* Journal entry lines */
+.j-lines{display:grid;gap:6px;margin-bottom:12px}
+.j-line{display:grid;grid-template-columns:2.5fr 1.5fr 1fr 1fr 26px;gap:6px;align-items:center}
+.j-line select,.j-line input{padding:6px 8px;background:var(--void-2);border:1px solid var(--line);border-radius:4px;font-size:12px;font-family:var(--mono)}
+.j-line .rm{background:transparent;border:0;color:var(--red);font-size:16px;padding:0;cursor:pointer}
+.j-totals{display:flex;justify-content:space-between;padding:8px 12px;background:var(--void-2);border-radius:5px;font-family:var(--mono);font-size:12px}
+.j-totals .ok{color:var(--green)}
+.j-totals .bad{color:var(--red)}
+
+/* Palette */
+.palette-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:flex-start;justify-content:center;padding-top:14vh;z-index:200}
+.palette-bg.show{display:flex}
+.palette{background:var(--ink);border:1px solid var(--brass);border-radius:10px;width:100%;max-width:600px;box-shadow:0 30px 80px rgba(0,0,0,.7)}
+.palette-hd{display:flex;align-items:center;gap:10px;padding:14px;border-bottom:1px solid var(--line)}
+.palette-hd .glyph{font-family:var(--serif);font-size:22px;color:var(--amber)}
+.palette-hd input{flex:1;background:transparent;font-size:15px;color:var(--cream);font-family:var(--mono)}
+.palette-hd .badge{padding:3px 8px;background:var(--void-2);border:1px solid var(--line);border-radius:4px;font-size:10px;font-family:var(--mono);color:var(--cream-dim)}
+.palette-bd{padding:14px;max-height:50vh;overflow:auto;font-size:12px;font-family:var(--mono);color:var(--cream-dim)}
+.palette-bd .hit{padding:6px 8px;border-radius:4px;cursor:pointer}
+.palette-bd .hit:hover{background:var(--void-2);color:var(--cream)}
+
+/* Empty state */
+.empty{text-align:center;padding:60px 20px;color:var(--cream-muted)}
+.empty .glyph{font-family:var(--serif);font-size:48px;color:var(--brass);margin-bottom:14px}
+.empty h3{color:var(--cream);font-size:18px;margin-bottom:6px}
+.empty p{font-size:12px;font-family:var(--mono);margin-bottom:14px}
+
+/* Pager */
+.pager{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:11px;font-family:var(--mono);color:var(--cream-muted)}
+.pager .pgs{display:flex;gap:4px}
+.pager button{padding:3px 8px;background:var(--ink);border:1px solid var(--line);border-radius:4px;color:var(--cream);font-family:var(--mono);font-size:11px}
+.pager button.active{background:var(--brass);color:var(--void);border-color:var(--brass)}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;right:20px;padding:10px 16px;background:var(--ink);border:1px solid var(--brass);border-radius:6px;font-family:var(--mono);font-size:12px;z-index:300;animation:slide .25s ease-out}
+.toast.ok{border-color:var(--green);color:var(--green)}
+.toast.err{border-color:var(--red);color:var(--red)}
+@keyframes slide{from{transform:translateX(20px);opacity:0}to{transform:none;opacity:1}}
+
+/* Assertions */
+.assert{padding:8px 12px;border-radius:5px;font-family:var(--mono);font-size:11px;margin-bottom:10px;display:inline-block}
+.assert.ok{background:rgba(74,222,128,.08);border:1px solid var(--green);color:var(--green)}
+.assert.bad{background:rgba(239,68,68,.1);border:1px solid var(--red);color:var(--red)}
+
+/* Responsive */
+@media (max-width:760px){
+  .hdr{gap:6px;padding:0 8px}
+  .hdr select,.hdr .closed-badge,.hdr .tier-badge{font-size:10px;padding:3px 6px}
+  .hdr .auto-btn span.lbl{display:none}
+  .brand .nm{display:none}
+  .main{padding:12px}
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  .row,.row.r3,.row.r4{grid-template-columns:1fr}
+  .j-line{grid-template-columns:1fr 1fr;grid-template-areas:'a a' 'm m' 'd c' 'x x'}
+  .tab{padding:8px 10px;font-size:11px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- header -->
+  <header class="hdr">
+    <div class="brand">
+      <span class="glyph">◊</span>
+      <span class="nm">FallLedger</span>
+      <span class="v">v1.0.0 · 541</span>
+    </div>
+    <div class="hdr-sp"></div>
+    <select id="periodSel">
+      <option value="month">this month</option>
+      <option value="quarter">this quarter</option>
+      <option value="year">this year</option>
+      <option value="custom">custom...</option>
+    </select>
+    <div class="closed-badge open" id="closedBadge">no close</div>
+    <button class="auto-btn" id="openPalette" title="Ctrl+K">Ω <span class="lbl">autopilot</span></button>
+    <div class="tier-badge" id="tierBadge">offline</div>
+    <button id="openSettings" title="settings">⚙</button>
+  </header>
+
+  <!-- tabs -->
+  <nav class="tabs">
+    <div class="tab active" data-pane="journals">journals</div>
+    <div class="tab" data-pane="coa">chart of accounts</div>
+    <div class="tab" data-pane="tb">trial balance</div>
+    <div class="tab" data-pane="pl">profit &amp; loss</div>
+    <div class="tab" data-pane="bs">balance sheet</div>
+    <div class="tab" data-pane="cf">cash flow</div>
+    <div class="tab" data-pane="vat">VAT</div>
+  </nav>
+
+  <!-- main -->
+  <main class="main">
+
+    <!-- journals -->
+    <section class="pane active" id="pane-journals">
+      <h1>Journals</h1>
+      <p class="sub">double-entry entries · debits = credits · locked once posted</p>
+      <div class="toolbar">
+        <button class="btn primary" id="newJournal">+ new journal</button>
+        <input id="jSearch" placeholder="search ref / narrative...">
+        <input id="jFrom" type="date" title="from">
+        <input id="jTo" type="date" title="to">
+        <select id="jAcct"><option value="">all accounts</option></select>
+        <input id="jAmt" type="number" placeholder="min amount" step="0.01">
+        <button class="btn ghost" id="jClear">clear</button>
+      </div>
+      <div id="journalList"></div>
+      <div class="pager" id="jPager"></div>
+    </section>
+
+    <!-- chart of accounts -->
+    <section class="pane" id="pane-coa">
+      <h1>Chart of Accounts</h1>
+      <p class="sub">UK SME pre-seeded · add / edit · delete blocked if used</p>
+      <div class="toolbar">
+        <button class="btn primary" id="newAccount">+ new account</button>
+        <select id="coaFilter">
+          <option value="">all categories</option>
+          <option value="asset">asset</option>
+          <option value="liability">liability</option>
+          <option value="equity">equity</option>
+          <option value="revenue">revenue</option>
+          <option value="expense">expense</option>
+        </select>
+        <button class="btn" id="reseed">reseed default CoA</button>
+      </div>
+      <div id="coaList"></div>
+    </section>
+
+    <!-- trial balance -->
+    <section class="pane" id="pane-tb">
+      <h1>Trial Balance</h1>
+      <p class="sub">every account · debit + credit + net · totals must equal</p>
+      <div class="toolbar">
+        <input id="tbFrom" type="date">
+        <input id="tbTo" type="date">
+        <button class="btn" id="tbRun">run</button>
+        <button class="btn" id="tbExport">export PDF</button>
+        <button class="btn ghost" id="tbCsv">CSV</button>
+      </div>
+      <div id="tbBody"></div>
+    </section>
+
+    <!-- p&l -->
+    <section class="pane" id="pane-pl">
+      <h1>Profit &amp; Loss</h1>
+      <p class="sub">revenue − expense by category · gross / operating / net</p>
+      <div class="toolbar">
+        <input id="plFrom" type="date">
+        <input id="plTo" type="date">
+        <button class="btn" id="plRun">run</button>
+        <button class="btn" id="plExport">export PDF</button>
+      </div>
+      <div id="plBody"></div>
+    </section>
+
+    <!-- balance sheet -->
+    <section class="pane" id="pane-bs">
+      <h1>Balance Sheet</h1>
+      <p class="sub">at a point in time · assets = liabilities + equity</p>
+      <div class="toolbar">
+        <input id="bsAt" type="date">
+        <button class="btn" id="bsRun">run</button>
+        <button class="btn" id="bsExport">export PDF</button>
+      </div>
+      <div id="bsBody"></div>
+    </section>
+
+    <!-- cash flow -->
+    <section class="pane" id="pane-cf">
+      <h1>Cash Flow Statement</h1>
+      <p class="sub">indirect method · operating · investing · financing</p>
+      <div class="toolbar">
+        <input id="cfFrom" type="date">
+        <input id="cfTo" type="date">
+        <button class="btn" id="cfRun">run</button>
+        <button class="btn" id="cfExport">export PDF</button>
+      </div>
+      <div id="cfBody"></div>
+    </section>
+
+    <!-- vat -->
+    <section class="pane" id="pane-vat">
+      <h1>VAT Return</h1>
+      <p class="sub">HMRC boxes 1-9 · informational · MTD submission requires HMRC-recognised software</p>
+      <div class="toolbar">
+        <input id="vatFrom" type="date">
+        <input id="vatTo" type="date">
+        <button class="btn" id="vatRun">run</button>
+        <button class="btn" id="vatCsv">export CSV</button>
+        <button class="btn" id="vatExport">export PDF</button>
+      </div>
+      <div id="vatBody"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- palette -->
+<div class="palette-bg" id="palette">
+  <div class="palette">
+    <div class="palette-hd"><span class="glyph">Ω</span><input id="pInput" placeholder="post journal: sales 1000 to bank · trial balance this month · p&l last quarter..."><span class="badge" id="pTier">T0</span></div>
+    <div class="palette-bd" id="pBody"></div>
+  </div>
+</div>
+
+<!-- generic modal -->
+<div class="modal-bg" id="modal">
+  <div class="modal" id="modalBox">
+    <div class="modal-hd"><h2 id="modalTitle">modal</h2><button class="close-x" data-close>×</button></div>
+    <div class="modal-bd" id="modalBody"></div>
+    <div class="modal-ft" id="modalFoot"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ========================================================================== */
+/* FallLedger · sovereign double-entry general ledger                         */
+/* PRIME 541 · v1.0.0 · MIT · ◊·κ=1                                            */
+/* ========================================================================== */
+
+const TOOLNAME='fallledger';
+const PRIME=541;
+const VERSION='1.0.0';
+
+/* -------------------- state -------------------- */
+const state={
+  accounts:[],
+  journals:[],
+  periods:[],
+  settings:{
+    vatRegistered:true,
+    vatScheme:'Standard',
+    homeCurrency:'GBP',
+    multiCurrency:false,
+    anthropicKey:'',openaiKey:'',geminiKey:'',openrouterKey:''
+  },
+  ui:{
+    tab:'journals',
+    jPage:0,
+    jFilters:{search:'',from:'',to:'',acct:'',amt:''},
+    coaFilter:'',
+    pageSize:50
+  }
+};
+
+/* -------------------- IndexedDB -------------------- */
+const DB_NAME='fallledger';
+const DB_VER=1;
+let db=null;
+
+function openDB(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(DB_NAME,DB_VER);
+    r.onupgradeneeded=e=>{
+      const d=e.target.result;
+      if(!d.objectStoreNames.contains('accounts'))d.createObjectStore('accounts',{keyPath:'id'});
+      if(!d.objectStoreNames.contains('journals'))d.createObjectStore('journals',{keyPath:'id'});
+      if(!d.objectStoreNames.contains('periods'))d.createObjectStore('periods',{keyPath:'id'});
+      if(!d.objectStoreNames.contains('settings'))d.createObjectStore('settings',{keyPath:'k'});
+    };
+    r.onsuccess=e=>{db=e.target.result;res()};
+    r.onerror=e=>rej(e);
+  });
+}
+function dbAll(store){return new Promise((res,rej)=>{const tx=db.transaction(store,'readonly');const s=tx.objectStore(store);const r=s.getAll();r.onsuccess=()=>res(r.result);r.onerror=e=>rej(e)})}
+function dbPut(store,obj){return new Promise((res,rej)=>{const tx=db.transaction(store,'readwrite');const r=tx.objectStore(store).put(obj);r.onsuccess=()=>res();r.onerror=e=>rej(e)})}
+function dbDel(store,id){return new Promise((res,rej)=>{const tx=db.transaction(store,'readwrite');const r=tx.objectStore(store).delete(id);r.onsuccess=()=>res();r.onerror=e=>rej(e)})}
+function dbClear(store){return new Promise((res,rej)=>{const tx=db.transaction(store,'readwrite');const r=tx.objectStore(store).clear();r.onsuccess=()=>res();r.onerror=e=>rej(e)})}
+
+async function loadAll(){
+  state.accounts=await dbAll('accounts');
+  state.journals=await dbAll('journals');
+  state.periods=await dbAll('periods');
+  const s=await dbAll('settings');
+  s.forEach(r=>{state.settings[r.k]=r.v});
+}
+async function saveSetting(k,v){state.settings[k]=v;await dbPut('settings',{k,v})}
+
+/* -------------------- seed CoA -------------------- */
+const SEED_COA=[
+  // assets
+  {code:'1000',name:'Cash on Hand',category:'asset'},
+  {code:'1010',name:'Bank',category:'asset'},
+  {code:'1020',name:'Bank · Reserve',category:'asset'},
+  {code:'1100',name:'Trade Debtors',category:'asset'},
+  {code:'1200',name:'Prepayments',category:'asset'},
+  {code:'1300',name:'Stock / Inventory',category:'asset'},
+  {code:'1500',name:'Plant & Equipment',category:'asset'},
+  {code:'1510',name:'Accumulated Depreciation',category:'asset'},
+  // liabilities
+  {code:'2000',name:'Trade Creditors',category:'liability'},
+  {code:'2100',name:'Accruals',category:'liability'},
+  {code:'2200',name:'VAT Control',category:'liability'},
+  {code:'2210',name:'PAYE / NIC',category:'liability'},
+  {code:'2300',name:'Corporation Tax',category:'liability'},
+  {code:'2400',name:'Director Loan',category:'liability'},
+  {code:'2500',name:'Bank Loan',category:'liability'},
+  // equity
+  {code:'3000',name:'Share Capital',category:'equity'},
+  {code:'3100',name:'Retained Earnings',category:'equity'},
+  {code:'3200',name:'Drawings',category:'equity'},
+  // revenue
+  {code:'4000',name:'Sales',category:'revenue'},
+  {code:'4010',name:'Service Income',category:'revenue'},
+  {code:'4100',name:'Other Income',category:'revenue'},
+  {code:'4200',name:'Interest Received',category:'revenue'},
+  // expenses
+  {code:'5000',name:'Cost of Sales',category:'expense'},
+  {code:'5100',name:'Subcontractors',category:'expense'},
+  {code:'6000',name:'Salaries',category:'expense'},
+  {code:'6010',name:'Employer NIC',category:'expense'},
+  {code:'6100',name:'Rent',category:'expense'},
+  {code:'6110',name:'Utilities',category:'expense'},
+  {code:'6120',name:'Insurance',category:'expense'},
+  {code:'6200',name:'Marketing',category:'expense'},
+  {code:'6210',name:'Travel',category:'expense'},
+  {code:'6220',name:'Office Supplies',category:'expense'},
+  {code:'6300',name:'Software & Subscriptions',category:'expense'},
+  {code:'6400',name:'Professional Fees',category:'expense'},
+  {code:'6500',name:'Bank Charges',category:'expense'},
+  {code:'6600',name:'Depreciation',category:'expense'},
+  {code:'6700',name:'Bad Debts',category:'expense'},
+  {code:'6800',name:'Interest Paid',category:'expense'}
+];
+
+async function seedCoA(force){
+  if(state.accounts.length>0 && !force)return;
+  if(force){await dbClear('accounts');state.accounts=[]}
+  for(const a of SEED_COA){
+    const acc={id:'A'+a.code,code:a.code,name:a.name,category:a.category,parent:null,currency:state.settings.homeCurrency||'GBP'};
+    await dbPut('accounts',acc);
+    state.accounts.push(acc);
+  }
+}
+
+/* -------------------- helpers -------------------- */
+const $=id=>document.getElementById(id);
+const fmt=n=>{const v=Number(n)||0;return v.toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2})};
+const today=()=>new Date().toISOString().slice(0,10);
+const uid=p=>(p||'')+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+function periodRange(kind){
+  const now=new Date();
+  const y=now.getFullYear(),m=now.getMonth();
+  if(kind==='month')return{from:new Date(y,m,1).toISOString().slice(0,10),to:new Date(y,m+1,0).toISOString().slice(0,10)};
+  if(kind==='quarter'){const q=Math.floor(m/3);return{from:new Date(y,q*3,1).toISOString().slice(0,10),to:new Date(y,q*3+3,0).toISOString().slice(0,10)}}
+  if(kind==='year')return{from:y+'-01-01',to:y+'-12-31'};
+  return{from:y+'-01-01',to:today()};
+}
+function getAcct(id){return state.accounts.find(a=>a.id===id)}
+function getAcctByCode(code){return state.accounts.find(a=>a.code===String(code))}
+function getAcctByName(q){q=q.toLowerCase();return state.accounts.find(a=>a.name.toLowerCase()===q)||state.accounts.find(a=>a.name.toLowerCase().includes(q))}
+function periodClosedFor(date){
+  const close=state.periods.length?state.periods[state.periods.length-1].closeDate:null;
+  return close && date<=close;
+}
+function toast(msg,kind){
+  const el=document.createElement('div');
+  el.className='toast '+(kind||'');
+  el.textContent=msg;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),2600);
+}
+
+/* -------------------- ledger math -------------------- */
+function balances(from,to){
+  // returns {accountId: {debit, credit, net}}
+  const out={};
+  state.accounts.forEach(a=>{out[a.id]={debit:0,credit:0,net:0,category:a.category,code:a.code,name:a.name}});
+  state.journals.forEach(j=>{
+    if(!j.posted||j.voided)return;
+    if(from && j.date<from)return;
+    if(to && j.date>to)return;
+    j.lines.forEach(l=>{
+      const b=out[l.accountId];if(!b)return;
+      b.debit+=Number(l.debit)||0;
+      b.credit+=Number(l.credit)||0;
+    });
+  });
+  Object.values(out).forEach(b=>{
+    // assets + expenses: net = debit - credit (positive = normal)
+    // liabilities + equity + revenue: net = credit - debit
+    if(b.category==='asset'||b.category==='expense')b.net=b.debit-b.credit;
+    else b.net=b.credit-b.debit;
+  });
+  return out;
+}
+
+function postJournal(entry,opts){
+  opts=opts||{};
+  // entry: {date, ref, narrative, lines:[{accountId, debit, credit, memo}]}
+  if(!entry.lines||entry.lines.length<2)throw new Error('journal needs at least 2 lines');
+  let dr=0,cr=0;
+  entry.lines.forEach(l=>{dr+=Number(l.debit)||0;cr+=Number(l.credit)||0});
+  if(Math.abs(dr-cr)>0.005)throw new Error('debits ('+fmt(dr)+') must equal credits ('+fmt(cr)+')');
+  if(!entry.date)entry.date=today();
+  if(periodClosedFor(entry.date) && !opts.unlock)throw new Error('period closed for '+entry.date+' — unlock first');
+  const j={
+    id:entry.id||uid('J'),
+    date:entry.date,
+    ref:entry.ref||'',
+    narrative:entry.narrative||'',
+    lines:entry.lines.map(l=>({
+      accountId:l.accountId,
+      debit:Number(l.debit)||0,
+      credit:Number(l.credit)||0,
+      memo:l.memo||'',
+      currency:l.currency||state.settings.homeCurrency||'GBP',
+      fxRate:Number(l.fxRate)||1
+    })),
+    posted:true,
+    voided:false,
+    reversalOf:entry.reversalOf||null,
+    source:entry.source||'manual',
+    createdAt:Date.now()
+  };
+  return dbPut('journals',j).then(()=>{
+    state.journals.push(j);
+    return j;
+  });
+}
+
+async function reverseJournal(jid){
+  const j=state.journals.find(x=>x.id===jid);
+  if(!j)throw new Error('not found');
+  if(j.reversalOf)throw new Error('already a reversal');
+  const rev={
+    date:today(),
+    ref:'REV-'+(j.ref||j.id.slice(0,6)),
+    narrative:'Reversal of '+(j.ref||j.id),
+    lines:j.lines.map(l=>({accountId:l.accountId,debit:l.credit,credit:l.debit,memo:'reversal · '+l.memo})),
+    reversalOf:j.id,
+    source:'reversal'
+  };
+  await postJournal(rev,{unlock:true});
+}
+
+/* -------------------- Cascade T0/T2/T3 -------------------- */
+const Cascade={
+  async detectTier(){if(await this._probe())return'T2';const s=state.settings;if(s.anthropicKey||s.openaiKey||s.geminiKey||s.openrouterKey)return'T3';return'T0'},
+  async _probe(){if(this._p!==undefined)return this._p;try{this._p=await Promise.race([fetch('http://127.0.0.1:11434/api/tags').then(r=>r.ok),new Promise(r=>setTimeout(()=>r(false),350))])}catch(e){this._p=false}return this._p},
+  async generate(sys,user,maxTok){const s=state.settings,max=maxTok||1200;
+    if(s.anthropicKey)try{const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':s.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:max,system:sys,messages:[{role:'user',content:user}]})});const d=await r.json();return{tier:'T3·Claude',text:d?.content?.[0]?.text||''}}catch(e){}
+    if(s.geminiKey)try{const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${s.geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:sys}]},contents:[{parts:[{text:user}]}]})});const d=await r.json();return{tier:'T3·Gemini',text:d?.candidates?.[0]?.content?.parts?.[0]?.text||''}}catch(e){}
+    if(s.openaiKey)try{const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.openaiKey},body:JSON.stringify({model:'gpt-4o-mini',messages:[{role:'system',content:sys},{role:'user',content:user}]})});const d=await r.json();return{tier:'T3·GPT',text:d?.choices?.[0]?.message?.content||''}}catch(e){}
+    if(s.openrouterKey)try{const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.openrouterKey,'HTTP-Referer':location.origin},body:JSON.stringify({model:'anthropic/claude-haiku-4-5',messages:[{role:'system',content:sys},{role:'user',content:user}]})});const d=await r.json();return{tier:'T3·OpenRouter',text:d?.choices?.[0]?.message?.content||''}}catch(e){}
+    return{tier:'T0',text:null}
+  }
+};
+async function updateTierBadge(){const t=await Cascade.detectTier();const el=document.getElementById('tierBadge');if(el){el.textContent=t==='T0'?'offline':t;el.classList.toggle('t3',t!=='T0')}}
+
+/* -------------------- rendering -------------------- */
+function renderTab(name){
+  state.ui.tab=name;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.pane===name));
+  document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('active',p.id==='pane-'+name));
+  if(name==='journals')renderJournals();
+  if(name==='coa')renderCoA();
+  if(name==='tb')renderTrialBalance();
+  if(name==='pl')renderPL();
+  if(name==='bs')renderBS();
+  if(name==='cf')renderCF();
+  if(name==='vat')renderVAT();
+}
+
+/* --- journals --- */
+function refreshAcctFilter(){
+  const sel=$('jAcct');
+  if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">all accounts</option>'+state.accounts.sort((a,b)=>a.code.localeCompare(b.code)).map(a=>`<option value="${a.id}">${a.code} · ${a.name}</option>`).join('');
+  sel.value=cur;
+}
+
+function filteredJournals(){
+  const f=state.ui.jFilters;
+  return state.journals.filter(j=>{
+    if(f.search){const q=f.search.toLowerCase();if(!(j.ref||'').toLowerCase().includes(q) && !(j.narrative||'').toLowerCase().includes(q))return false}
+    if(f.from && j.date<f.from)return false;
+    if(f.to && j.date>f.to)return false;
+    if(f.acct && !j.lines.some(l=>l.accountId===f.acct))return false;
+    if(f.amt){const t=j.lines.reduce((s,l)=>s+(Number(l.debit)||0),0);if(t<Number(f.amt))return false}
+    return true;
+  }).sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt-a.createdAt);
+}
+
+function renderJournals(){
+  const all=filteredJournals();
+  const ps=state.ui.pageSize;
+  const pages=Math.max(1,Math.ceil(all.length/ps));
+  if(state.ui.jPage>=pages)state.ui.jPage=0;
+  const page=all.slice(state.ui.jPage*ps,(state.ui.jPage+1)*ps);
+  if(all.length===0){
+    $('journalList').innerHTML=`<div class="empty"><div class="glyph">◊</div><h3>no journals yet</h3><p>post your first entry · the chart of accounts is already seeded · feeds from fallinvoice / fallap auto-post here</p><button class="btn primary" onclick="openJournalModal()">+ new journal</button></div>`;
+    $('jPager').innerHTML='';return;
+  }
+  let html='<table class="tbl"><thead><tr><th>date</th><th>ref</th><th>narrative</th><th>lines</th><th class="num">total</th><th>state</th><th></th></tr></thead><tbody>';
+  page.forEach(j=>{
+    const tot=j.lines.reduce((s,l)=>s+(Number(l.debit)||0),0);
+    const lines=j.lines.map(l=>{const a=getAcct(l.accountId);return (a?a.code:'?')+(l.debit?' Dr '+fmt(l.debit):' Cr '+fmt(l.credit))}).join(' · ');
+    html+=`<tr>
+      <td>${j.date}</td>
+      <td>${j.ref||'<span class="muted">—</span>'}</td>
+      <td>${j.narrative||''}${j.source&&j.source!=='manual'?' <span class="muted">[via '+j.source+']</span>':''}</td>
+      <td class="muted" style="font-size:11px">${lines}</td>
+      <td class="num">${fmt(tot)}</td>
+      <td>${j.reversalOf?'<span class="muted">reversal</span>':'<span class="pos">posted</span>'}</td>
+      <td><button class="btn ghost" onclick="viewJournal('${j.id}')">view</button> <button class="btn ghost" onclick="reverseJ('${j.id}')">reverse</button></td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  $('journalList').innerHTML=html;
+  // pager
+  let p='<span>'+all.length+' entries · page '+(state.ui.jPage+1)+'/'+pages+'</span><div class="pgs">';
+  for(let i=0;i<Math.min(pages,10);i++)p+='<button class="'+(i===state.ui.jPage?'active':'')+'" onclick="state.ui.jPage='+i+';renderJournals()">'+(i+1)+'</button>';
+  p+='</div>';
+  $('jPager').innerHTML=p;
+}
+
+window.viewJournal=function(jid){
+  const j=state.journals.find(x=>x.id===jid);if(!j)return;
+  let html='<div class="kv"><span class="k">date</span><span class="v">'+j.date+'</span></div>';
+  html+='<div class="kv"><span class="k">ref</span><span class="v">'+(j.ref||'—')+'</span></div>';
+  html+='<div class="kv"><span class="k">narrative</span><span class="v">'+(j.narrative||'—')+'</span></div>';
+  html+='<div class="kv"><span class="k">source</span><span class="v">'+(j.source||'manual')+'</span></div>';
+  html+='<h3>Lines</h3><table class="tbl"><thead><tr><th>account</th><th>memo</th><th class="num">debit</th><th class="num">credit</th></tr></thead><tbody>';
+  let dr=0,cr=0;
+  j.lines.forEach(l=>{const a=getAcct(l.accountId);dr+=Number(l.debit)||0;cr+=Number(l.credit)||0;html+='<tr><td>'+(a?a.code+' · '+a.name:'?')+'</td><td class="muted">'+(l.memo||'')+'</td><td class="num">'+(l.debit?fmt(l.debit):'')+'</td><td class="num">'+(l.credit?fmt(l.credit):'')+'</td></tr>'});
+  html+='<tr class="total"><td colspan="2">total</td><td class="num">'+fmt(dr)+'</td><td class="num">'+fmt(cr)+'</td></tr></tbody></table>';
+  openModal('Journal · '+(j.ref||j.id.slice(0,8)),html,[{label:'close',action:closeModal}]);
+};
+
+window.reverseJ=async function(jid){
+  if(!confirm('Post a reversal of this entry?'))return;
+  try{await reverseJournal(jid);toast('reversal posted','ok');renderJournals()}
+  catch(e){toast(e.message,'err')}
+};
+
+/* --- journal entry modal --- */
+let modalLines=[];
+
+window.openJournalModal=function(prefill){
+  modalLines=prefill&&prefill.lines?prefill.lines.slice():[{accountId:'',debit:0,credit:0,memo:''},{accountId:'',debit:0,credit:0,memo:''}];
+  const date=(prefill&&prefill.date)||today();
+  const ref=(prefill&&prefill.ref)||'';
+  const narr=(prefill&&prefill.narrative)||'';
+  const html=`
+    <div class="row r3">
+      <div class="field"><label>date</label><input type="date" id="jeDate" value="${date}"></div>
+      <div class="field"><label>ref</label><input id="jeRef" value="${ref}" placeholder="e.g. INV-001"></div>
+      <div class="field"><label>narrative</label><input id="jeNarr" value="${narr}" placeholder="description"></div>
+    </div>
+    <h3>Lines</h3>
+    <div class="j-lines" id="jeLines"></div>
+    <button class="btn" id="jeAdd">+ add line</button>
+    <div class="j-totals" id="jeTotals"></div>
+  `;
+  openModal('New Journal Entry',html,[
+    {label:'cancel',action:closeModal,ghost:true},
+    {label:'post entry',action:postModalJournal,primary:true}
+  ]);
+  renderModalLines();
+  $('jeAdd').onclick=()=>{modalLines.push({accountId:'',debit:0,credit:0,memo:''});renderModalLines()};
+};
+
+function renderModalLines(){
+  const acctOpts='<option value="">— select —</option>'+state.accounts.sort((a,b)=>a.code.localeCompare(b.code)).map(a=>`<option value="${a.id}">${a.code} · ${a.name}</option>`).join('');
+  const el=$('jeLines');
+  el.innerHTML=modalLines.map((l,i)=>`
+    <div class="j-line">
+      <select data-i="${i}" data-k="accountId">${acctOpts.replace(`value="${l.accountId}"`,`value="${l.accountId}" selected`)}</select>
+      <input data-i="${i}" data-k="memo" placeholder="memo" value="${l.memo||''}">
+      <input data-i="${i}" data-k="debit" type="number" step="0.01" placeholder="debit" value="${l.debit||''}">
+      <input data-i="${i}" data-k="credit" type="number" step="0.01" placeholder="credit" value="${l.credit||''}">
+      <button class="rm" data-rm="${i}" title="remove">×</button>
+    </div>`).join('');
+  el.querySelectorAll('select,input').forEach(inp=>{
+    inp.addEventListener('input',e=>{
+      const i=+e.target.dataset.i,k=e.target.dataset.k;
+      let v=e.target.value;
+      if(k==='debit'||k==='credit')v=Number(v)||0;
+      modalLines[i][k]=v;
+      updateModalTotals();
+    });
+  });
+  el.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{const i=+b.dataset.rm;modalLines.splice(i,1);if(modalLines.length<2)modalLines.push({accountId:'',debit:0,credit:0,memo:''});renderModalLines()});
+  updateModalTotals();
+}
+
+function updateModalTotals(){
+  let dr=0,cr=0;
+  modalLines.forEach(l=>{dr+=Number(l.debit)||0;cr+=Number(l.credit)||0});
+  const ok=Math.abs(dr-cr)<0.005 && dr>0;
+  $('jeTotals').innerHTML=`<span>total debits: <strong>${fmt(dr)}</strong></span><span>total credits: <strong>${fmt(cr)}</strong></span><span class="${ok?'ok':'bad'}">${ok?'balanced ✓':'out by '+fmt(Math.abs(dr-cr))}</span>`;
+}
+
+async function postModalJournal(){
+  try{
+    await postJournal({
+      date:$('jeDate').value,
+      ref:$('jeRef').value,
+      narrative:$('jeNarr').value,
+      lines:modalLines.filter(l=>l.accountId)
+    });
+    toast('journal posted','ok');
+    closeModal();
+    renderJournals();
+  }catch(e){toast(e.message,'err')}
+}
+
+/* --- chart of accounts --- */
+function renderCoA(){
+  const list=state.accounts.filter(a=>!state.ui.coaFilter||a.category===state.ui.coaFilter).sort((a,b)=>a.code.localeCompare(b.code));
+  if(list.length===0){
+    $('coaList').innerHTML='<div class="empty"><div class="glyph">◊</div><h3>no accounts</h3><p>seed the UK SME chart of accounts</p><button class="btn primary" onclick="seedCoA(true).then(()=>{refreshAcctFilter();renderCoA();toast(\'seeded\',\'ok\')})">seed default CoA</button></div>';
+    return;
+  }
+  let html='<table class="tbl"><thead><tr><th>code</th><th>name</th><th>category</th><th>currency</th><th class="num">balance</th><th></th></tr></thead><tbody>';
+  const bal=balances('','');
+  list.forEach(a=>{
+    const b=bal[a.id]?bal[a.id].net:0;
+    const cls=b===0?'muted':(b>0?'pos':'neg');
+    html+=`<tr>
+      <td class="acc-code">${a.code}</td>
+      <td>${a.name}</td>
+      <td><span class="muted">${a.category}</span></td>
+      <td class="muted">${a.currency||'GBP'}</td>
+      <td class="num ${cls}">${fmt(b)}</td>
+      <td>
+        <button class="btn ghost" onclick="editAccount('${a.id}')">edit</button>
+        <button class="btn ghost" onclick="deleteAccount('${a.id}')">delete</button>
+      </td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  $('coaList').innerHTML=html;
+}
+
+window.editAccount=function(id){
+  const a=id?getAcct(id):{code:'',name:'',category:'asset',currency:state.settings.homeCurrency||'GBP'};
+  const html=`
+    <div class="row r4">
+      <div class="field"><label>code</label><input id="acCode" value="${a.code||''}"></div>
+      <div class="field"><label>name</label><input id="acName" value="${a.name||''}"></div>
+      <div class="field"><label>category</label><select id="acCat">${['asset','liability','equity','revenue','expense'].map(c=>`<option ${c===a.category?'selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="field"><label>currency</label><input id="acCur" value="${a.currency||'GBP'}"></div>
+    </div>
+    <div class="field"><label>parent (optional)</label><select id="acParent"><option value="">— none —</option>${state.accounts.filter(x=>x.id!==id).map(x=>`<option value="${x.id}" ${a.parent===x.id?'selected':''}>${x.code} · ${x.name}</option>`).join('')}</select></div>
+  `;
+  openModal(id?'Edit account':'New account',html,[
+    {label:'cancel',action:closeModal,ghost:true},
+    {label:'save',action:async()=>{
+      const obj={
+        id:id||'A'+$('acCode').value+uid(''),
+        code:$('acCode').value.trim(),
+        name:$('acName').value.trim(),
+        category:$('acCat').value,
+        currency:$('acCur').value.trim()||'GBP',
+        parent:$('acParent').value||null
+      };
+      if(!obj.code||!obj.name){toast('code and name required','err');return}
+      await dbPut('accounts',obj);
+      const ix=state.accounts.findIndex(x=>x.id===obj.id);
+      if(ix>=0)state.accounts[ix]=obj;else state.accounts.push(obj);
+      refreshAcctFilter();renderCoA();closeModal();toast('saved','ok');
+    },primary:true}
+  ]);
+};
+
+window.deleteAccount=async function(id){
+  const used=state.journals.some(j=>j.lines.some(l=>l.accountId===id));
+  if(used){toast('cannot delete — used in journals','err');return}
+  if(!confirm('Delete account?'))return;
+  await dbDel('accounts',id);
+  state.accounts=state.accounts.filter(a=>a.id!==id);
+  refreshAcctFilter();renderCoA();toast('deleted','ok');
+};
+
+/* --- trial balance --- */
+function renderTrialBalance(){
+  const from=$('tbFrom').value||'';
+  const to=$('tbTo').value||today();
+  const bal=balances(from,to);
+  const rows=state.accounts.sort((a,b)=>a.code.localeCompare(b.code)).map(a=>({a,b:bal[a.id]})).filter(r=>r.b.debit||r.b.credit);
+  if(rows.length===0){$('tbBody').innerHTML='<div class="empty"><div class="glyph">◊</div><h3>no activity</h3><p>post a journal to see a trial balance</p></div>';return}
+  let dr=0,cr=0;
+  let html='<table class="tbl"><thead><tr><th>code</th><th>account</th><th>category</th><th class="num">debit</th><th class="num">credit</th><th class="num">net</th></tr></thead><tbody>';
+  rows.forEach(r=>{
+    dr+=r.b.debit;cr+=r.b.credit;
+    const net=r.b.net;
+    const cls=net>=0?'pos':'neg';
+    html+=`<tr><td class="acc-code">${r.a.code}</td><td>${r.a.name}</td><td class="muted">${r.a.category}</td><td class="num">${fmt(r.b.debit)}</td><td class="num">${fmt(r.b.credit)}</td><td class="num ${cls}">${fmt(net)}</td></tr>`;
+  });
+  html+=`<tr class="total"><td colspan="3">TOTAL</td><td class="num">${fmt(dr)}</td><td class="num">${fmt(cr)}</td><td></td></tr></tbody></table>`;
+  const ok=Math.abs(dr-cr)<0.005;
+  html=`<div class="assert ${ok?'ok':'bad'}">${ok?'✓ debits = credits ('+fmt(dr)+')':'✗ debits ('+fmt(dr)+') ≠ credits ('+fmt(cr)+')'}</div>`+html;
+  $('tbBody').innerHTML=html;
+}
+
+/* --- p&l --- */
+function renderPL(){
+  const from=$('plFrom').value||periodRange('year').from;
+  const to=$('plTo').value||today();
+  const bal=balances(from,to);
+  const rev=[],cos=[],exp=[];
+  state.accounts.forEach(a=>{
+    const b=bal[a.id];
+    if(!b.debit && !b.credit)return;
+    if(a.category==='revenue')rev.push({a,n:b.net});
+    else if(a.category==='expense'){
+      if(a.code&&a.code.startsWith('5'))cos.push({a,n:b.net});
+      else exp.push({a,n:b.net});
+    }
+  });
+  const totRev=rev.reduce((s,x)=>s+x.n,0);
+  const totCos=cos.reduce((s,x)=>s+x.n,0);
+  const totExp=exp.reduce((s,x)=>s+x.n,0);
+  const gp=totRev-totCos;
+  const op=gp-totExp;
+  const np=op;
+  let html=`<div class="sub">period: ${from} → ${to}</div>`;
+  html+='<table class="tbl"><tbody>';
+  html+='<tr><td colspan="2"><strong>Revenue</strong></td></tr>';
+  rev.forEach(r=>html+=`<tr><td class="indent-1">${r.a.code} · ${r.a.name}</td><td class="num pos">${fmt(r.n)}</td></tr>`);
+  html+=`<tr class="total"><td>Total revenue</td><td class="num">${fmt(totRev)}</td></tr>`;
+  html+='<tr><td colspan="2"><strong>Cost of sales</strong></td></tr>';
+  cos.forEach(r=>html+=`<tr><td class="indent-1">${r.a.code} · ${r.a.name}</td><td class="num neg">${fmt(r.n)}</td></tr>`);
+  html+=`<tr class="total"><td>Gross profit</td><td class="num">${fmt(gp)}</td></tr>`;
+  html+='<tr><td colspan="2"><strong>Operating expenses</strong></td></tr>';
+  exp.forEach(r=>html+=`<tr><td class="indent-1">${r.a.code} · ${r.a.name}</td><td class="num neg">${fmt(r.n)}</td></tr>`);
+  html+=`<tr class="total"><td>Operating profit</td><td class="num">${fmt(op)}</td></tr>`;
+  html+=`<tr class="total"><td>Net profit</td><td class="num ${np>=0?'pos':'neg'}">${fmt(np)}</td></tr>`;
+  html+='</tbody></table>';
+  $('plBody').innerHTML=html;
+}
+
+/* --- balance sheet --- */
+function renderBS(){
+  const at=$('bsAt').value||today();
+  const bal=balances('',at);
+  const assets=[],liab=[],eq=[];
+  state.accounts.forEach(a=>{
+    const b=bal[a.id];
+    if(a.category==='asset')assets.push({a,n:b.net});
+    else if(a.category==='liability')liab.push({a,n:b.net});
+    else if(a.category==='equity')eq.push({a,n:b.net});
+  });
+  // retained earnings = revenue - expenses up to date
+  let re=0;
+  state.accounts.forEach(a=>{
+    const b=bal[a.id];
+    if(a.category==='revenue')re+=b.net;
+    if(a.category==='expense')re-=b.net;
+  });
+  const totA=assets.reduce((s,x)=>s+x.n,0);
+  const totL=liab.reduce((s,x)=>s+x.n,0);
+  const totE=eq.reduce((s,x)=>s+x.n,0)+re;
+  const ok=Math.abs(totA-(totL+totE))<0.01;
+  let html=`<div class="sub">as at: ${at}</div>`;
+  html+=`<div class="assert ${ok?'ok':'bad'}">${ok?'✓ assets = liabilities + equity ('+fmt(totA)+')':'✗ assets ('+fmt(totA)+') ≠ L+E ('+fmt(totL+totE)+')'}</div>`;
+  html+='<div class="grid grid-2">';
+  html+='<div class="card"><h3>Assets</h3><table class="tbl"><tbody>';
+  assets.filter(x=>x.n!==0).forEach(r=>html+=`<tr><td class="acc-code">${r.a.code}</td><td>${r.a.name}</td><td class="num">${fmt(r.n)}</td></tr>`);
+  html+=`<tr class="total"><td colspan="2">Total assets</td><td class="num">${fmt(totA)}</td></tr></tbody></table></div>`;
+  html+='<div class="card"><h3>Liabilities &amp; Equity</h3><table class="tbl"><tbody>';
+  html+='<tr><td colspan="3"><strong>Liabilities</strong></td></tr>';
+  liab.filter(x=>x.n!==0).forEach(r=>html+=`<tr><td class="acc-code">${r.a.code}</td><td>${r.a.name}</td><td class="num">${fmt(r.n)}</td></tr>`);
+  html+=`<tr class="total"><td colspan="2">Total liabilities</td><td class="num">${fmt(totL)}</td></tr>`;
+  html+='<tr><td colspan="3"><strong>Equity</strong></td></tr>';
+  eq.filter(x=>x.n!==0).forEach(r=>html+=`<tr><td class="acc-code">${r.a.code}</td><td>${r.a.name}</td><td class="num">${fmt(r.n)}</td></tr>`);
+  html+=`<tr><td class="acc-code">—</td><td>Retained Earnings (computed)</td><td class="num">${fmt(re)}</td></tr>`;
+  html+=`<tr class="total"><td colspan="2">Total equity</td><td class="num">${fmt(totE)}</td></tr>`;
+  html+=`<tr class="total"><td colspan="2">Total L + E</td><td class="num">${fmt(totL+totE)}</td></tr>`;
+  html+='</tbody></table></div></div>';
+  $('bsBody').innerHTML=html;
+}
+
+/* --- cash flow --- */
+function renderCF(){
+  const from=$('cfFrom').value||periodRange('year').from;
+  const to=$('cfTo').value||today();
+  const bal=balances(from,to);
+  // indirect: start with net income, adjust for non-cash + working capital
+  let netInc=0;
+  state.accounts.forEach(a=>{const b=bal[a.id];if(a.category==='revenue')netInc+=b.net;if(a.category==='expense')netInc-=b.net});
+  const dep=state.accounts.filter(a=>a.code==='6600'||a.name.toLowerCase().includes('depreciation')).reduce((s,a)=>s+bal[a.id].net,0);
+  const dDeb=state.accounts.filter(a=>a.code==='1100').reduce((s,a)=>s+bal[a.id].net,0);
+  const dCred=state.accounts.filter(a=>a.code==='2000').reduce((s,a)=>s+bal[a.id].net,0);
+  const dVat=state.accounts.filter(a=>a.code==='2200').reduce((s,a)=>s+bal[a.id].net,0);
+  const operating=netInc+dep-dDeb+dCred+dVat;
+  const investing=state.accounts.filter(a=>a.code==='1500').reduce((s,a)=>s-bal[a.id].net,0);
+  const financing=state.accounts.filter(a=>a.code==='2500'||a.code==='3000'||a.code==='2400').reduce((s,a)=>s+bal[a.id].net,0)-state.accounts.filter(a=>a.code==='3200').reduce((s,a)=>s+bal[a.id].net,0);
+  const netCash=operating+investing+financing;
+  let html=`<div class="sub">period: ${from} → ${to} · indirect method</div>`;
+  html+='<table class="tbl"><tbody>';
+  html+='<tr><td colspan="2"><strong>Operating activities</strong></td></tr>';
+  html+=`<tr><td class="indent-1">Net income</td><td class="num">${fmt(netInc)}</td></tr>`;
+  html+=`<tr><td class="indent-1">+ Depreciation</td><td class="num">${fmt(dep)}</td></tr>`;
+  html+=`<tr><td class="indent-1">− Δ Trade Debtors</td><td class="num">${fmt(-dDeb)}</td></tr>`;
+  html+=`<tr><td class="indent-1">+ Δ Trade Creditors</td><td class="num">${fmt(dCred)}</td></tr>`;
+  html+=`<tr><td class="indent-1">+ Δ VAT Control</td><td class="num">${fmt(dVat)}</td></tr>`;
+  html+=`<tr class="total"><td>Net cash from operating</td><td class="num">${fmt(operating)}</td></tr>`;
+  html+='<tr><td colspan="2"><strong>Investing activities</strong></td></tr>';
+  html+=`<tr><td class="indent-1">P&amp;E movement</td><td class="num">${fmt(investing)}</td></tr>`;
+  html+=`<tr class="total"><td>Net cash from investing</td><td class="num">${fmt(investing)}</td></tr>`;
+  html+='<tr><td colspan="2"><strong>Financing activities</strong></td></tr>';
+  html+=`<tr><td class="indent-1">Loans + capital + drawings</td><td class="num">${fmt(financing)}</td></tr>`;
+  html+=`<tr class="total"><td>Net cash from financing</td><td class="num">${fmt(financing)}</td></tr>`;
+  html+=`<tr class="total"><td>Net change in cash</td><td class="num ${netCash>=0?'pos':'neg'}">${fmt(netCash)}</td></tr>`;
+  html+='</tbody></table>';
+  $('cfBody').innerHTML=html;
+}
+
+/* --- vat --- */
+function vatBoxes(from,to){
+  // boxes per HMRC:
+  // 1 vat due on sales · 2 vat due on acquisitions (NI) · 3 total vat due · 4 vat reclaimed
+  // 5 net vat · 6 total sales ex vat · 7 total purchases ex vat · 8 EC supplies · 9 EC acquisitions
+  let b1=0,b2=0,b4=0,b6=0,b7=0,b8=0,b9=0;
+  state.journals.forEach(j=>{
+    if(!j.posted||j.voided)return;
+    if(from && j.date<from)return;
+    if(to && j.date>to)return;
+    j.lines.forEach(l=>{
+      const a=getAcct(l.accountId);if(!a)return;
+      if(a.code==='2200'){ // VAT Control
+        // credit = output VAT (sales) -> box 1
+        // debit = input VAT (purchases) -> box 4
+        b1+=Number(l.credit)||0;
+        b4+=Number(l.debit)||0;
+      }
+      if(a.category==='revenue'){b6+=Number(l.credit)||0;b6-=Number(l.debit)||0}
+      if(a.category==='expense'){b7+=Number(l.debit)||0;b7-=Number(l.credit)||0}
+    });
+  });
+  const b3=b1+b2,b5=b3-b4;
+  return{b1,b2,b3,b4,b5,b6,b7,b8,b9};
+}
+
+function renderVAT(){
+  const from=$('vatFrom').value||periodRange('quarter').from;
+  const to=$('vatTo').value||periodRange('quarter').to;
+  const v=vatBoxes(from,to);
+  let html=`<div class="sub">period: ${from} → ${to} · scheme: ${state.settings.vatScheme} · ${state.settings.vatRegistered?'registered':'not registered'}</div>`;
+  html+='<div class="assert ok">informational only · MTD submission requires HMRC-recognised software</div>';
+  const rows=[
+    ['1','VAT due on sales and other outputs',v.b1],
+    ['2','VAT due on acquisitions from NI / EU',v.b2],
+    ['3','Total VAT due (1 + 2)',v.b3],
+    ['4','VAT reclaimed on purchases',v.b4],
+    ['5','Net VAT to pay (3 − 4)',v.b5],
+    ['6','Total value of sales ex. VAT',v.b6],
+    ['7','Total value of purchases ex. VAT',v.b7],
+    ['8','Total value of EC supplies',v.b8],
+    ['9','Total value of EC acquisitions',v.b9]
+  ];
+  html+='<table class="tbl"><thead><tr><th>box</th><th>description</th><th class="num">amount (£)</th></tr></thead><tbody>';
+  rows.forEach(r=>html+=`<tr><td class="acc-code">${r[0]}</td><td>${r[1]}</td><td class="num">${fmt(r[2])}</td></tr>`);
+  html+='</tbody></table>';
+  $('vatBody').innerHTML=html;
+}
+
+/* --- export --- */
+function reportMarkdown(name){
+  const lines=['# '+name,'','*FallLedger · '+new Date().toISOString().slice(0,10)+'*',''];
+  if(name==='Trial Balance'){
+    const from=$('tbFrom').value||'';const to=$('tbTo').value||today();
+    const bal=balances(from,to);
+    lines.push('Period: '+(from||'inception')+' → '+to,'','| code | account | debit | credit | net |','|---|---|---:|---:|---:|');
+    let dr=0,cr=0;
+    state.accounts.sort((a,b)=>a.code.localeCompare(b.code)).forEach(a=>{const b=bal[a.id];if(!b.debit&&!b.credit)return;dr+=b.debit;cr+=b.credit;lines.push('| '+a.code+' | '+a.name+' | '+fmt(b.debit)+' | '+fmt(b.credit)+' | '+fmt(b.net)+' |')});
+    lines.push('| | **TOTAL** | **'+fmt(dr)+'** | **'+fmt(cr)+'** | |');
+  }
+  return lines.join('\n');
+}
+
+function exportPDF(name){
+  const md=reportMarkdown(name);
+  try{window.postMessage({target:'fallpdf',action:'setSource',source:md,from:TOOLNAME},'*')}catch(e){}
+  // also offer download fallback
+  const blob=new Blob([md],{type:'text/markdown'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name.replace(/\s+/g,'-').toLowerCase()+'.md';a.click();
+  toast('sent to fallpdf + downloaded markdown','ok');
+}
+
+function exportCSV(name,rows){
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name+'.csv';a.click();
+}
+
+/* --- close period --- */
+function renderClosedBadge(){
+  const close=state.periods.length?state.periods[state.periods.length-1].closeDate:null;
+  const el=$('closedBadge');
+  if(close){el.textContent='closed ≤ '+close;el.classList.remove('open')}
+  else{el.textContent='no close';el.classList.add('open')}
+}
+
+function openCloseModal(){
+  const close=state.periods.length?state.periods[state.periods.length-1].closeDate:'';
+  const html=`<div class="field"><label>close all journals on or before</label><input type="date" id="clDate" value="${close||today()}"></div><p class="sub">entries dated on or before this date become read-only. you can unlock by setting a later or empty date.</p>`;
+  openModal('Period close',html,[
+    {label:'remove close',action:async()=>{await dbClear('periods');state.periods=[];renderClosedBadge();closeModal();toast('open','ok')},ghost:true},
+    {label:'set close',action:async()=>{const d=$('clDate').value;if(!d){toast('pick a date','err');return}const p={id:uid('P'),closeDate:d};await dbClear('periods');await dbPut('periods',p);state.periods=[p];renderClosedBadge();closeModal();toast('period closed','ok')},primary:true}
+  ]);
+}
+
+/* -------------------- modal -------------------- */
+function openModal(title,bodyHtml,buttons){
+  $('modalTitle').textContent=title;
+  $('modalBody').innerHTML=bodyHtml;
+  const ft=$('modalFoot');ft.innerHTML='';
+  (buttons||[]).forEach(b=>{
+    const btn=document.createElement('button');
+    btn.className='btn '+(b.primary?'primary':b.ghost?'ghost':'');
+    btn.textContent=b.label;
+    btn.onclick=b.action;
+    ft.appendChild(btn);
+  });
+  $('modal').classList.add('show');
+}
+function closeModal(){$('modal').classList.remove('show')}
+document.addEventListener('click',e=>{if(e.target.matches('[data-close]')||e.target===$('modal'))closeModal()});
+
+/* -------------------- Ω palette -------------------- */
+function openPalette(){$('palette').classList.add('show');setTimeout(()=>$('pInput').focus(),50);$('pBody').innerHTML='<div class="muted">try: <em>post journal: sales 1000 to bank</em> · <em>trial balance this month</em> · <em>p&l last quarter</em> · <em>vat return Q2</em> · <em>balance sheet</em></div>'}
+function closePalette(){$('palette').classList.remove('show');$('pInput').value=''}
+
+async function runPalette(q){
+  const body=$('pBody');
+  body.innerHTML='<div class="muted">parsing...</div>';
+  // T0 keyword router
+  const t=q.toLowerCase().trim();
+  if(/trial bal/.test(t)){const p=t.includes('quarter')?'quarter':t.includes('year')?'year':'month';const r=periodRange(p);$('tbFrom').value=r.from;$('tbTo').value=r.to;renderTab('tb');renderTrialBalance();closePalette();return}
+  if(/^p\W?l|profit/.test(t)){const p=t.includes('quarter')||t.includes('q1')||t.includes('q2')||t.includes('q3')||t.includes('q4')?'quarter':t.includes('year')?'year':'month';const r=periodRange(p);$('plFrom').value=r.from;$('plTo').value=r.to;renderTab('pl');renderPL();closePalette();return}
+  if(/balance sheet|bs$/.test(t)){$('bsAt').value=today();renderTab('bs');renderBS();closePalette();return}
+  if(/cash ?flow|^cf/.test(t)){const r=periodRange('quarter');$('cfFrom').value=r.from;$('cfTo').value=r.to;renderTab('cf');renderCF();closePalette();return}
+  if(/vat/.test(t)){const r=periodRange('quarter');$('vatFrom').value=r.from;$('vatTo').value=r.to;renderTab('vat');renderVAT();closePalette();return}
+  // post journal: <fromAcct> <amount> to <toAcct>
+  const m=t.match(/post journal[:\s]+(.+?)\s+([\d.]+)\s+(?:to|->)\s+(.+)$/);
+  if(m){
+    const amt=Number(m[2]);
+    const src=getAcctByName(m[1]);
+    const dst=getAcctByName(m[3]);
+    if(!src||!dst){body.innerHTML='<div class="muted">could not match accounts: '+m[1]+' / '+m[3]+'</div>';return}
+    // heuristic: if src is revenue/liability/equity → credit src, debit dst
+    // if src is asset/expense → debit src, credit dst
+    let lines;
+    if(['revenue','liability','equity'].includes(src.category)){
+      lines=[{accountId:dst.id,debit:amt,credit:0,memo:''},{accountId:src.id,debit:0,credit:amt,memo:''}];
+    } else {
+      lines=[{accountId:src.id,debit:amt,credit:0,memo:''},{accountId:dst.id,debit:0,credit:amt,memo:''}];
+    }
+    openJournalModal({date:today(),narrative:q,lines});
+    closePalette();return;
+  }
+  // T3 fallback
+  const tier=await Cascade.detectTier();
+  if(tier==='T3'){
+    body.innerHTML='<div class="muted">asking '+tier+'...</div>';
+    const sys='You are FallLedger autopilot. Map the user intent into a JSON action. Reply ONLY with JSON. Schema: {"action":"postJournal"|"report","args":{...}}. For postJournal: {"date":"YYYY-MM-DD","ref":"","narrative":"","lines":[{"accountCode":"4000","debit":0,"credit":0,"memo":""}]}. Accounts: '+state.accounts.map(a=>a.code+' '+a.name+' ('+a.category+')').join(', ');
+    const r=await Cascade.generate(sys,q,800);
+    try{
+      const j=JSON.parse((r.text||'').replace(/```json|```/g,'').trim());
+      if(j.action==='postJournal'){
+        const lines=j.args.lines.map(l=>{const a=getAcctByCode(l.accountCode);return{accountId:a?a.id:'',debit:l.debit||0,credit:l.credit||0,memo:l.memo||''}}).filter(l=>l.accountId);
+        openJournalModal({date:j.args.date||today(),ref:j.args.ref||'',narrative:j.args.narrative||q,lines});
+        closePalette();return;
+      }
+      body.innerHTML='<div class="muted">'+(r.text||'')+'</div>';
+    }catch(e){body.innerHTML='<div class="muted">'+r.tier+' said: '+(r.text||'(empty)')+'</div>'}
+    return;
+  }
+  body.innerHTML='<div class="muted">no T0 match · set an API key in settings for T3 parsing</div>';
+}
+
+/* -------------------- settings -------------------- */
+function openSettingsModal(){
+  const s=state.settings;
+  const html=`
+    <h3>VAT</h3>
+    <div class="row r3">
+      <div class="field"><label>VAT registered</label><select id="setVatReg"><option value="true" ${s.vatRegistered?'selected':''}>yes</option><option value="false" ${!s.vatRegistered?'selected':''}>no</option></select></div>
+      <div class="field"><label>scheme</label><select id="setVatScheme">${['Standard','Cash','Flat Rate'].map(x=>`<option ${x===s.vatScheme?'selected':''}>${x}</option>`).join('')}</select></div>
+      <div class="field"><label>home currency</label><input id="setCur" value="${s.homeCurrency}"></div>
+    </div>
+    <h3>Multi-currency</h3>
+    <div class="field"><label>enable</label><select id="setMc"><option value="false" ${!s.multiCurrency?'selected':''}>off</option><option value="true" ${s.multiCurrency?'selected':''}>on</option></select></div>
+    <h3>API keys (BYOK · T3 autopilot)</h3>
+    <div class="row">
+      <div class="field"><label>Anthropic</label><input type="password" id="setAnth" value="${s.anthropicKey||''}"></div>
+      <div class="field"><label>OpenAI</label><input type="password" id="setOai" value="${s.openaiKey||''}"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Gemini</label><input type="password" id="setGem" value="${s.geminiKey||''}"></div>
+      <div class="field"><label>OpenRouter</label><input type="password" id="setOr" value="${s.openrouterKey||''}"></div>
+    </div>
+    <h3>Period close</h3>
+    <button class="btn" onclick="openCloseModal()">manage period close</button>
+    <h3>Data</h3>
+    <div class="toolbar"><button class="btn" onclick="exportData()">export JSON</button><button class="btn" onclick="$('importFile').click()">import JSON</button><input type="file" id="importFile" style="display:none" accept=".json" onchange="importData(event)"><button class="btn danger" onclick="wipeData()">wipe all data</button></div>
+  `;
+  openModal('Settings',html,[
+    {label:'cancel',action:closeModal,ghost:true},
+    {label:'save',action:async()=>{
+      await saveSetting('vatRegistered',$('setVatReg').value==='true');
+      await saveSetting('vatScheme',$('setVatScheme').value);
+      await saveSetting('homeCurrency',$('setCur').value||'GBP');
+      await saveSetting('multiCurrency',$('setMc').value==='true');
+      await saveSetting('anthropicKey',$('setAnth').value);
+      await saveSetting('openaiKey',$('setOai').value);
+      await saveSetting('geminiKey',$('setGem').value);
+      await saveSetting('openrouterKey',$('setOr').value);
+      updateTierBadge();
+      closeModal();toast('saved','ok');
+    },primary:true}
+  ]);
+}
+window.openCloseModal=openCloseModal;
+window.exportData=function(){
+  const dump={tool:TOOLNAME,version:VERSION,prime:PRIME,exportedAt:new Date().toISOString(),accounts:state.accounts,journals:state.journals,periods:state.periods,settings:state.settings};
+  const blob=new Blob([JSON.stringify(dump,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fallledger-export-'+today()+'.json';a.click();
+};
+window.importData=async function(ev){
+  const f=ev.target.files[0];if(!f)return;
+  const text=await f.text();
+  try{
+    const d=JSON.parse(text);
+    if(d.accounts){await dbClear('accounts');for(const a of d.accounts)await dbPut('accounts',a)}
+    if(d.journals){await dbClear('journals');for(const j of d.journals)await dbPut('journals',j)}
+    if(d.periods){await dbClear('periods');for(const p of d.periods)await dbPut('periods',p)}
+    await loadAll();refreshAcctFilter();renderTab(state.ui.tab);renderClosedBadge();
+    toast('imported','ok');
+  }catch(e){toast('import failed: '+e.message,'err')}
+};
+window.wipeData=async function(){
+  if(!confirm('Wipe ALL ledger data? This cannot be undone.'))return;
+  await dbClear('accounts');await dbClear('journals');await dbClear('periods');
+  state.accounts=[];state.journals=[];state.periods=[];
+  await seedCoA();refreshAcctFilter();renderTab(state.ui.tab);renderClosedBadge();
+  toast('wiped + reseeded','ok');
+};
+
+/* -------------------- feed handlers (fall-signal) -------------------- */
+function handleFeed(msg){
+  try{
+    if(msg.source==='fallinvoice' && msg.type==='invoice.posted'){
+      const debtors=getAcctByCode('1100');
+      const sales=getAcctByCode('4000');
+      const vat=getAcctByCode('2200');
+      if(!debtors||!sales){toast('CoA not seeded for invoice feed','err');return}
+      const gross=Number(msg.gross)||((Number(msg.net)||0)+(Number(msg.vat)||0));
+      const net=Number(msg.net)||gross;
+      const vatAmt=Number(msg.vat)||0;
+      const lines=[{accountId:debtors.id,debit:gross,credit:0,memo:msg.ref||''},{accountId:sales.id,debit:0,credit:net,memo:msg.ref||''}];
+      if(vatAmt>0&&vat)lines.push({accountId:vat.id,debit:0,credit:vatAmt,memo:'VAT '+(msg.vatRate?msg.vatRate*100+'%':'')});
+      postJournal({date:msg.date||today(),ref:msg.ref||'',narrative:msg.narrative||'Invoice from fallinvoice',source:'fallinvoice',lines}).then(()=>{toast('invoice posted from fallinvoice','ok');renderJournals()}).catch(e=>toast(e.message,'err'));
+    }
+    else if(msg.source==='fallap' && msg.type==='bill.posted'){
+      const creditors=getAcctByCode('2000');
+      const expCode=msg.expenseCode||'6220';
+      const exp=getAcctByCode(expCode);
+      const vat=getAcctByCode('2200');
+      if(!creditors||!exp)return;
+      const gross=Number(msg.gross)||((Number(msg.net)||0)+(Number(msg.vat)||0));
+      const net=Number(msg.net)||gross;
+      const vatAmt=Number(msg.vat)||0;
+      const lines=[{accountId:exp.id,debit:net,credit:0,memo:msg.ref||''},{accountId:creditors.id,debit:0,credit:gross,memo:msg.ref||''}];
+      if(vatAmt>0&&vat)lines.push({accountId:vat.id,debit:vatAmt,credit:0,memo:'input VAT'});
+      postJournal({date:msg.date||today(),ref:msg.ref||'',narrative:msg.narrative||'Bill from fallap',source:'fallap',lines}).then(()=>{toast('bill posted from fallap','ok');renderJournals()}).catch(e=>toast(e.message,'err'));
+    }
+    else if(msg.source==='fallaccount' && msg.type==='cash.movement'){
+      const bank=getAcctByCode(msg.bankCode||'1010');
+      const other=getAcctByCode(msg.otherCode||'4100');
+      if(!bank||!other)return;
+      const amt=Number(msg.amount)||0;
+      const direction=msg.direction||'in';
+      const lines=direction==='in'
+        ?[{accountId:bank.id,debit:amt,credit:0,memo:msg.memo||''},{accountId:other.id,debit:0,credit:amt,memo:msg.memo||''}]
+        :[{accountId:other.id,debit:amt,credit:0,memo:msg.memo||''},{accountId:bank.id,debit:0,credit:amt,memo:msg.memo||''}];
+      postJournal({date:msg.date||today(),ref:msg.ref||'',narrative:msg.narrative||'Cash movement from fallaccount',source:'fallaccount',lines}).then(()=>{toast('cash movement from fallaccount','ok');renderJournals()}).catch(e=>{});
+    }
+    else if(msg.source==='fallaccount-trades' && msg.type==='trade.settled'){
+      const bank=getAcctByCode(msg.bankCode||'1010');
+      const counter=getAcctByCode(msg.counterCode||'4100');
+      if(!bank||!counter)return;
+      const amt=Number(msg.amount)||0;
+      const lines=(msg.side||'buy')==='buy'
+        ?[{accountId:counter.id,debit:amt,credit:0,memo:msg.ref||''},{accountId:bank.id,debit:0,credit:amt,memo:msg.ref||''}]
+        :[{accountId:bank.id,debit:amt,credit:0,memo:msg.ref||''},{accountId:counter.id,debit:0,credit:amt,memo:msg.ref||''}];
+      postJournal({date:msg.date||today(),ref:msg.ref||'',narrative:msg.narrative||'Trade settlement',source:'fallaccount-trades',lines}).then(()=>renderJournals()).catch(e=>{});
+    }
+  }catch(e){console.warn('feed handler error',e)}
+}
+
+/* -------------------- wire up -------------------- */
+function wire(){
+  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>renderTab(t.dataset.pane));
+  $('newJournal').onclick=()=>openJournalModal();
+  $('newAccount').onclick=()=>editAccount(null);
+  $('reseed').onclick=async()=>{if(!confirm('Reseed will wipe existing accounts. Proceed?'))return;await seedCoA(true);refreshAcctFilter();renderCoA();toast('reseeded','ok')};
+  $('coaFilter').onchange=e=>{state.ui.coaFilter=e.target.value;renderCoA()};
+  $('jSearch').oninput=e=>{state.ui.jFilters.search=e.target.value;state.ui.jPage=0;renderJournals()};
+  $('jFrom').oninput=e=>{state.ui.jFilters.from=e.target.value;renderJournals()};
+  $('jTo').oninput=e=>{state.ui.jFilters.to=e.target.value;renderJournals()};
+  $('jAcct').onchange=e=>{state.ui.jFilters.acct=e.target.value;renderJournals()};
+  $('jAmt').oninput=e=>{state.ui.jFilters.amt=e.target.value;renderJournals()};
+  $('jClear').onclick=()=>{state.ui.jFilters={search:'',from:'',to:'',acct:'',amt:''};['jSearch','jFrom','jTo','jAcct','jAmt'].forEach(id=>$(id).value='');renderJournals()};
+
+  $('tbRun').onclick=renderTrialBalance;
+  $('tbExport').onclick=()=>exportPDF('Trial Balance');
+  $('tbCsv').onclick=()=>{const from=$('tbFrom').value||'',to=$('tbTo').value||today();const bal=balances(from,to);const rows=[['code','name','category','debit','credit','net']];state.accounts.sort((a,b)=>a.code.localeCompare(b.code)).forEach(a=>{const b=bal[a.id];if(b.debit||b.credit)rows.push([a.code,a.name,a.category,b.debit.toFixed(2),b.credit.toFixed(2),b.net.toFixed(2)])});exportCSV('trial-balance',rows)};
+  $('plRun').onclick=renderPL;
+  $('plExport').onclick=()=>exportPDF('Profit and Loss');
+  $('bsRun').onclick=renderBS;
+  $('bsExport').onclick=()=>exportPDF('Balance Sheet');
+  $('cfRun').onclick=renderCF;
+  $('cfExport').onclick=()=>exportPDF('Cash Flow');
+  $('vatRun').onclick=renderVAT;
+  $('vatExport').onclick=()=>exportPDF('VAT Return');
+  $('vatCsv').onclick=()=>{const from=$('vatFrom').value||periodRange('quarter').from,to=$('vatTo').value||periodRange('quarter').to;const v=vatBoxes(from,to);const rows=[['box','description','amount'],['1','VAT due on sales',v.b1.toFixed(2)],['2','VAT due acquisitions',v.b2.toFixed(2)],['3','Total VAT due',v.b3.toFixed(2)],['4','VAT reclaimed',v.b4.toFixed(2)],['5','Net VAT',v.b5.toFixed(2)],['6','Sales ex VAT',v.b6.toFixed(2)],['7','Purchases ex VAT',v.b7.toFixed(2)],['8','EC supplies',v.b8.toFixed(2)],['9','EC acquisitions',v.b9.toFixed(2)],['','# informational; MTD submission requires HMRC-recognised software','']];exportCSV('vat-return',rows)};
+
+  $('periodSel').onchange=e=>{const r=periodRange(e.target.value);['tbFrom','plFrom','cfFrom','vatFrom','jFrom'].forEach(id=>{if($(id))$(id).value=r.from});['tbTo','plTo','cfTo','vatTo','jTo','bsAt'].forEach(id=>{if($(id))$(id).value=r.to});state.ui.jFilters.from=r.from;state.ui.jFilters.to=r.to;renderTab(state.ui.tab)};
+
+  $('closedBadge').onclick=openCloseModal;
+  $('openSettings').onclick=openSettingsModal;
+  $('openPalette').onclick=openPalette;
+
+  // palette events
+  $('pInput').addEventListener('keydown',e=>{if(e.key==='Enter')runPalette($('pInput').value);if(e.key==='Escape')closePalette()});
+  document.addEventListener('keydown',e=>{
+    if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();openPalette()}
+    if(e.key==='Escape')closePalette();
+  });
+  $('palette').addEventListener('click',e=>{if(e.target===$('palette'))closePalette()});
+}
+
+/* -------------------- bootstrap -------------------- */
+(async function init(){
+  try{
+    await openDB();
+    await loadAll();
+    await seedCoA();
+    wire();
+    refreshAcctFilter();
+    // default dates
+    const r=periodRange('month');
+    ['tbFrom','plFrom','cfFrom','vatFrom','jFrom'].forEach(id=>{if($(id))$(id).value=r.from});
+    ['tbTo','plTo','cfTo','vatTo','jTo'].forEach(id=>{if($(id))$(id).value=r.to});
+    $('bsAt').value=r.to;
+    renderClosedBadge();
+    renderTab('journals');
+    updateTierBadge();
+  }catch(e){console.error('init failed',e);document.body.innerHTML='<div style="padding:40px;color:#e6e1d6;font-family:monospace">init failed: '+e.message+'</div>'}
+})();
+
+/* ========================================================================== */
+/* KONOMI shim · fallmesh · postMessage                                       */
+/* ========================================================================== */
+window.KONOMI={active:true,tier:'sovereign',prime:PRIME,check:()=>({ok:true,tier:'sovereign'})};
+try{
+  const sig=new BroadcastChannel('fall-signal');
+  sig.postMessage({source:TOOLNAME,type:'hello',prime:PRIME,version:VERSION,ts:Date.now()});
+  sig.addEventListener('message',e=>{
+    const m=e.data;if(!m)return;
+    if(m.type==='ping')sig.postMessage({source:TOOLNAME,type:'pong',prime:PRIME});
+    // feed handlers — route any inbound that looks like a feed payload
+    if(m.source && ['fallinvoice','fallap','fallaccount','fallaccount-trades'].includes(m.source) && m.type){
+      handleFeed(m);
+    }
+  });
+}catch(e){}
+window.addEventListener('message',async e=>{
+  const m=e.data;if(!m||m.target!==TOOLNAME||!m.action)return;
+  let r=null;
+  if(m.action==='ping')r={ok:true,prime:PRIME,version:VERSION};
+  else if(m.action==='getTrialBalance'){const bal=balances(m.from||'',m.to||today());r={ok:true,balances:bal}}
+  else if(m.action==='postJournal'){try{const j=await postJournal(m.entry||{});renderJournals();r={ok:true,id:j.id}}catch(err){r={ok:false,error:err.message}}}
+  else if(m.action==='getAccounts')r={ok:true,accounts:state.accounts};
+  e.source?.postMessage({target:m.source||'*',responseTo:m.action,data:r},'*');
+});
+
+</script>
+</body>
+</html>
