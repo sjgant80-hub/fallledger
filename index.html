@@ -1385,9 +1385,16 @@ function renderModalLines(){
 }
 
 function updateModalTotals(){
-  let dr=0,cr=0;
-  modalLines.forEach(l=>{dr+=Number(l.debit)||0;cr+=Number(l.credit)||0});
-  const ok=Math.abs(dr-cr)<0.005 && dr>0;
+  // ⚑ THE PREVIEW MUST AGREE WITH THE POST. This counted amounts its own way, so once the posting
+  // path went through the kernel the two could disagree: type 1,000 and the running total showed
+  // nothing while the journal posted a thousand pounds. A screen that contradicts what the button
+  // is about to do is worse than no screen. Same kernel, same answer.
+  const check=LEDGER.validateJournal({lines:modalLines},{
+    accounts:state.accounts,
+    homeCurrency:(state.settings && state.settings.homeCurrency) || "GBP",
+  });
+  const dr=LEDGER.pounds(check.debits), cr=LEDGER.pounds(check.credits);
+  const ok=check.ok;
   $('jeTotals').innerHTML=`<span>total debits: <strong>${fmt(dr)}</strong></span><span>total credits: <strong>${fmt(cr)}</strong></span><span class="${ok?'ok':'bad'}">${ok?'balanced ✓':'out by '+fmt(Math.abs(dr-cr))}</span>`;
 }
 
