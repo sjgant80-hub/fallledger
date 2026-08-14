@@ -1,0 +1,8 @@
+[
+  {
+    "line": 61,
+    "mutation": "&& → ||",
+    "snippet": "const o = (opts && typeof opts === 'object') ? opts : {};",
+    "reason": "Equivalent. This normalises the options bag passed to normalizeLine. The two versions differ only for a value that is truthy but not an object — a string, a number, true, a function — which the original replaces with {} and the mutant keeps as-is. Either way the only property read off it is o.accounts, and none of those types carries an accounts property, so it is undefined in both cases and the Array.isArray check that guards it fails identically. There is no input for which a different line, or a different set of problems, comes back. That a line posting to an account outside the supplied list is refused, and that omitting the list entirely checks shape only, are both asserted in section 4."
+  }
+]
