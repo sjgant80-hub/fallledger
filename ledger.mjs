@@ -12,14 +12,20 @@
 // NaN, so a line typed the way money is written on a proposal becomes 0. Type both sides that way and
 // the journal is all zeros — which balances, and posts, and records nothing.
 //
-// ⚑ IT BALANCED TO WITHIN HALF A PENNY. `Math.abs(dr-cr)>0.005` was needed because pounds were summed
-// as floating point. Counted in whole pence there is nothing to tolerate: money balances exactly or it
-// is not balanced. A tolerance is a decision to lose money slowly.
+// ⚑ IT BALANCED TO WITHIN HALF A PENNY. The old check allowed the two sides to differ by up to
+// 0.005, because it summed pounds as floating point and needed the slack. Counted in whole pence
+// there is nothing to tolerate: money balances exactly or it is not balanced. A tolerance is a
+// decision to lose money slowly.
 //
-// ⚑ AND THE TRIAL BALANCE DROPPED WHAT IT COULD NOT PLACE. `balances()` does `const b=out[l.accountId];
-// if(!b)return;` — a line posted to an account that has since been deleted is silently skipped. Every
-// journal still balances individually, and the trial balance does not, and nothing anywhere says why.
-// The entire purpose of a trial balance is that it balances; one that quietly cannot is worse than none.
+// ⚑ AND THE TRIAL BALANCE DROPPED WHAT IT COULD NOT PLACE. It looked each line's account up in its
+// running totals and, finding none, returned early without a word — so a line posted to an account
+// that has since been deleted was skipped in silence. Every journal still balanced individually, the
+// trial balance did not, and nothing anywhere said why. The entire purpose of a trial balance is that
+// it balances; one that quietly cannot is worse than none at all.
+//
+// (Both faults are described here in prose rather than quoted as code on purpose: the page inlines
+// this file, and CI greps the page for the old expressions. A guard that trips on a comment explaining
+// the bug is a guard nobody can live with — the same trap fall-graft met with its own closing tags.)
 //
 // Pure: no storage, no clock, no DOM. Money is integer pence throughout.
 
