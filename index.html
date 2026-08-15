@@ -1496,8 +1496,25 @@ function renderTrialBalance(){
     html+=`<tr><td class="acc-code">${r.a.code}</td><td>${r.a.name}</td><td class="muted">${r.a.category}</td><td class="num">${fmt(r.b.debit)}</td><td class="num">${fmt(r.b.credit)}</td><td class="num ${cls}">${fmt(net)}</td></tr>`;
   });
   html+=`<tr class="total"><td colspan="3">TOTAL</td><td class="num">${fmt(dr)}</td><td class="num">${fmt(cr)}</td><td></td></tr></tbody></table>`;
-  const ok=Math.abs(dr-cr)<0.005;
-  html=`<div class="assert ${ok?'ok':'bad'}">${ok?'✓ debits = credits ('+fmt(dr)+')':'✗ debits ('+fmt(dr)+') ≠ credits ('+fmt(cr)+')'}</div>`+html;
+  /* ⚑ THE VERDICT COMES FROM THE KERNEL, NOT FROM THE TOTALS THIS SCREEN HAPPENED TO DRAW.
+     This line used to take the absolute difference of the two column totals and call anything under
+     half a penny balanced — the tolerance, back in the one place a reader looks to decide whether the
+     books are straight. Two things were wrong with it. It tolerated a discrepancy, and money balances
+     exactly or it does not balance. And it was computed from the rows this table drew, so a line the
+     kernel could NOT PLACE was invisible here: `unplaced` never reached the screen, and a ledger with
+     lines going nowhere showed a tick. balances() carries the real answer three lines away. Read it.
+
+     Described in prose on purpose: CI greps this file for that expression, and a comment quoting it
+     verbatim trips the guard on its own explanation. That has now cost five repositories today. */
+  const trial = bal.__trial || {};
+  const unplaced = trial.unplaced || [];
+  const ok = trial.balanced === true;
+  const msg = ok
+    ? '✓ debits = credits (' + fmt(dr) + ')'
+    : unplaced.length
+      ? '✗ ' + unplaced.length + ' line(s) could not be placed in any account — the books do not balance'
+      : '✗ debits (' + fmt(dr) + ') ≠ credits (' + fmt(cr) + ')';
+  html=`<div class="assert ${ok?'ok':'bad'}">${msg}</div>`+html;
   $('tbBody').innerHTML=html;
 }
 
