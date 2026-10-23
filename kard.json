@@ -1,0 +1,29 @@
+{
+  "kind": "kard.v1",
+  "name": "fallledger",
+  "title": "FallLedger",
+  "retires": "a rented general ledger (NetSuite-style)",
+  "category": "Accounting and tax",
+  "license": "MIT",
+  "live": "https://sjgant80-hub.github.io/fallledger/",
+  "repo": "https://github.com/sjgant80-hub/fallledger",
+  "studs": {
+    "brain": {
+      "how": "inline",
+      "version": "3.1.0"
+    },
+    "mesh": {
+      "device": true,
+      "peer": false
+    },
+    "memory": {
+      "indexeddb": true,
+      "localstorage": false
+    },
+    "proof": {
+      "workflows": 1,
+      "tests": 1
+    }
+  },
+  "fits": true
+}
