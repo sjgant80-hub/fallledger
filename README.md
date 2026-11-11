@@ -8,7 +8,7 @@ Part of the TemuOracle suite — the keystone of the Oracle wedge. Replaces Orac
 
 - **Prime:** 541
 - **Version:** 1.0.0
-- **Seal:** ◊·κ=1 · MIT
+- **Seal:** MIT
 
 ---
 
@@ -125,4 +125,4 @@ Single file · <400KB target · domain L1 views · Ω + 7 named ops · Cascade T
 
 ---
 
-MIT. Prime 541. ◊·κ=1.
+MIT. Prime 541. .
